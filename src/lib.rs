@@ -169,11 +169,10 @@ impl PerfEvents {
         pe.set_disabled(1);
         pe.set_inherit(1);
         pe.set_inherit_stat(0);
-        pe.set_exclude_user((!(domain & EventDomain::USER)).bits());
-        pe.set_exclude_kernel((!(domain & EventDomain::KERNEL)).bits());
-        pe.set_exclude_hv((!(domain & EventDomain::HYPERVISOR)).bits());
+        pe.set_exclude_user(!(domain & EventDomain::USER).bits());
+        pe.set_exclude_kernel(!(domain & EventDomain::KERNEL).bits());
+        pe.set_exclude_hv(!(domain & EventDomain::HYPERVISOR).bits());
         pe.read_format = u64::from(PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING);
-
         pe
     }
 
