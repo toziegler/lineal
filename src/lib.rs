@@ -174,7 +174,6 @@ impl PerfEvents {
         pe.set_exclude_kernel((domain & EventDomain::KERNEL).is_empty() as u64);
         pe.set_exclude_hv((domain & EventDomain::HYPERVISOR).is_empty() as u64);
         pe.read_format = u64::from(PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING);
-        dbg!(pe);
         pe
     }
 
