@@ -169,7 +169,7 @@ impl PerfEvents {
         pe.config = u64::from(perf_id);
         pe.set_disabled(1);
         pe.set_inherit(1);
-        pe.set_inherit_stat(1);
+        pe.set_inherit_stat(0);
         pe.set_exclude_user((domain & EventDomain::USER).is_empty() as u64);
         pe.set_exclude_kernel((domain & EventDomain::KERNEL).is_empty() as u64);
         pe.set_exclude_hv((domain & EventDomain::HYPERVISOR).is_empty() as u64);
