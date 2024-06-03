@@ -14,7 +14,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use bitflags::Flags;
 use perf_event_open_sys::{
     bindings::{
         perf_event_attr, perf_hw_id, perf_type_id, PERF_COUNT_HW_BRANCH_MISSES,
@@ -27,21 +26,13 @@ use perf_event_open_sys::{
 
 #[derive(Debug)]
 #[repr(C)]
+#[derive(Default)]
 struct ReadFormat {
     value: u64,
     time_enabled: u64,
     time_running: u64,
 }
 
-impl Default for ReadFormat {
-    fn default() -> Self {
-        Self {
-            value: 0,
-            time_enabled: 0,
-            time_running: 0,
-        }
-    }
-}
 #[derive(Debug)]
 struct Event {
     pe: perf_event_open_sys::bindings::perf_event_attr,
@@ -58,7 +49,7 @@ impl Event {
     }
 }
 #[derive(Debug)]
-struct PerfEvents {
+pub struct PerfEvents {
     events: Vec<Event>,
     names: Vec<String>,
     begin: Instant,
@@ -79,21 +70,21 @@ impl PerfEvents {
         let mut names = Vec::new();
         let mut perf_event_atrrs = Vec::new();
         let mut events = Vec::new();
-        perf_event_atrrs.push(PerfEvents::register_counter(
+        perf_event_atrrs.push(Self::register_counter(
             &mut names,
             "cycles",
             perf_event_open_sys::bindings::PERF_TYPE_HARDWARE,
             perf_event_open_sys::bindings::PERF_COUNT_HW_CPU_CYCLES,
             EventDomain::all(),
         ));
-        perf_event_atrrs.push(PerfEvents::register_counter(
+        perf_event_atrrs.push(Self::register_counter(
             &mut names,
             "kcycles",
             perf_event_open_sys::bindings::PERF_TYPE_HARDWARE,
             perf_event_open_sys::bindings::PERF_COUNT_HW_CPU_CYCLES,
             EventDomain::KERNEL,
         ));
-        perf_event_atrrs.push(PerfEvents::register_counter(
+        perf_event_atrrs.push(Self::register_counter(
             &mut names,
             "instructions",
             perf_event_open_sys::bindings::PERF_TYPE_HARDWARE,
@@ -101,7 +92,7 @@ impl PerfEvents {
             EventDomain::all(),
         ));
 
-        perf_event_atrrs.push(PerfEvents::register_counter(
+        perf_event_atrrs.push(Self::register_counter(
             &mut names,
             "L1-misses",
             perf_event_open_sys::bindings::PERF_TYPE_HW_CACHE,
@@ -111,7 +102,7 @@ impl PerfEvents {
             EventDomain::all(),
         ));
 
-        perf_event_atrrs.push(PerfEvents::register_counter(
+        perf_event_atrrs.push(Self::register_counter(
             &mut names,
             "LLC-misses",
             perf_event_open_sys::bindings::PERF_TYPE_HARDWARE,
@@ -119,7 +110,7 @@ impl PerfEvents {
             EventDomain::all(),
         ));
 
-        perf_event_atrrs.push(PerfEvents::register_counter(
+        perf_event_atrrs.push(Self::register_counter(
             &mut names,
             "branch-misses",
             perf_event_open_sys::bindings::PERF_TYPE_HARDWARE,
@@ -127,7 +118,7 @@ impl PerfEvents {
             EventDomain::all(),
         ));
 
-        perf_event_atrrs.push(PerfEvents::register_counter(
+        perf_event_atrrs.push(Self::register_counter(
             &mut names,
             "task-clock",
             perf_event_open_sys::bindings::PERF_TYPE_SOFTWARE,
@@ -173,33 +164,33 @@ impl PerfEvents {
         let mut pe = perf_event_attr::default();
         //let mut pe = perf_event_attr::default();
         pe.type_ = perf_type;
-        pe.size = std::mem::size_of::<perf_event_attr>() as u32;
-        pe.config = perf_id as u64;
+        pe.size = u32::try_from(std::mem::size_of::<perf_event_attr>()).expect("could not cast");
+        pe.config = u64::from(perf_id);
         pe.set_disabled(1);
         pe.set_inherit(1);
         pe.set_inherit_stat(0);
         pe.set_exclude_user((!(domain & EventDomain::USER)).bits());
         pe.set_exclude_kernel((!(domain & EventDomain::KERNEL)).bits());
         pe.set_exclude_hv((!(domain & EventDomain::HYPERVISOR)).bits());
-        pe.read_format = (PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING) as u64;
+        pe.read_format = u64::from(PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING);
 
         pe
     }
 
     pub fn start_measurement(&mut self) -> Result<(), std::io::Error> {
         let mut data = [0_u8; std::mem::size_of::<ReadFormat>()];
-        for event in self.events.iter_mut() {
+        for event in &mut self.events {
             unsafe {
                 libc::ioctl(
                     event.file.as_raw_fd(),
-                    perf_event_open_sys::bindings::RESET as u64,
+                    u64::from(perf_event_open_sys::bindings::RESET),
                     0,
                 )
             };
             unsafe {
                 libc::ioctl(
                     event.file.as_raw_fd(),
-                    perf_event_open_sys::bindings::ENABLE as u64,
+                    u64::from(perf_event_open_sys::bindings::ENABLE),
                     0,
                 )
             };
@@ -221,7 +212,7 @@ impl PerfEvents {
 
     pub fn stop_measurement(&mut self) -> Result<(), std::io::Error> {
         let mut data = [0_u8; std::mem::size_of::<ReadFormat>()];
-        for event in self.events.iter_mut() {
+        for event in &mut self.events {
             let bytes_read = event.file.read(&mut data)?;
             if bytes_read != data.len() {
                 return Err(std::io::Error::new(
@@ -233,7 +224,7 @@ impl PerfEvents {
             unsafe {
                 libc::ioctl(
                     event.file.as_raw_fd(),
-                    perf_event_open_sys::bindings::DISABLE as u64,
+                    u64::from(perf_event_open_sys::bindings::DISABLE),
                     0,
                 )
             };
@@ -264,10 +255,10 @@ impl PerfEvents {
 
     fn get_counter_normalized(&self, name: &str, normalization_constant: f64) -> f64 {
         match name {
-            "IPC" => return self.get_ipc(),
-            "CPUs" => return self.get_cpus(),
-            "GHz" => return self.get_ghz(),
-            "runtime" => return self.get_duration().as_secs_f64(),
+            "IPC" => self.get_ipc(),
+            "CPUs" => self.get_cpus(),
+            "GHz" => self.get_ghz(),
+            "runtime" => self.get_duration().as_secs_f64(),
             _ => self.get_counter(name) / normalization_constant,
         }
     }
@@ -288,7 +279,7 @@ impl PerfEvents {
         -1.0
     }
     fn normalized_iterator(&self, normalization_constant: f64) -> PerfEventsIter<'_> {
-        PerfEventsIter::new(&self, normalization_constant)
+        PerfEventsIter::new(self, normalization_constant)
     }
 }
 
@@ -377,7 +368,7 @@ impl CSVOutput {
         counter_value: f64,
         add_comma: bool,
     ) {
-        let width = name.len().max(format!("{:.2}", counter_value).len());
+        let width = name.len().max(format!("{counter_value:.2}").len());
         header_out.push_str(&format!(
             "{:width$}{}",
             name,
@@ -398,23 +389,23 @@ impl OutputStrategy for CSVOutput {
         let mut header = String::new();
         let mut data = String::new();
         let mut out = BufWriter::new(stdout());
-        for (name, counter_value) in self.benchmark_params.iter() {
+        for (name, counter_value) in &self.benchmark_params {
             self.print_params(
                 &mut header,
                 &mut data,
                 name.as_str(),
                 counter_value.as_str(),
                 true,
-            )
+            );
         }
         self.print_report_impl(events, &mut header, &mut data, self.normalization_constant);
-        writeln!(out, "{}", header).unwrap();
-        writeln!(out, "{}", data).unwrap();
+        writeln!(out, "{header}").unwrap();
+        writeln!(out, "{data}").unwrap();
     }
 }
 
 // pass in parameters
-struct PerfEventBlock {
+pub struct PerfEventBlock {
     events: PerfEvents,
     benchmark_params: HashMap<String, String>,
     normalization_constant: f64,
@@ -464,7 +455,6 @@ mod tests {
             unsafe { _mm_pause() };
         }
         lineal.stop_measurement().unwrap();
-        let mut data = BufWriter::new(stdout());
 
         let mut benchmark_params = HashMap::new();
         benchmark_params.insert("Test".to_owned(), "Running".to_owned());
