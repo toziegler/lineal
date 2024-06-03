@@ -424,6 +424,9 @@ impl PerfEventBlock {
             normalization_constant,
         })
     }
+    pub fn set_normalization_constant(&mut self, normalization_constant: f64) {
+        self.normalization_constant = normalization_constant;
+    }
 }
 impl Drop for PerfEventBlock {
     fn drop(&mut self) {
