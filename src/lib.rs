@@ -168,7 +168,6 @@ impl PerfEvents {
         pe.size = u32::try_from(std::mem::size_of::<perf_event_attr>()).expect("could not cast");
         pe.config = u64::from(perf_id);
         pe.set_disabled(1);
-        pe.set_task(1);
         pe.set_inherit(1);
         pe.set_inherit_stat(0);
         pe.set_exclude_user((domain & EventDomain::USER).is_empty() as u64);
