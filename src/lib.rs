@@ -14,6 +14,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use bitflags::Flags;
 use perf_event_open_sys::{
     bindings::{
         perf_event_attr, perf_hw_id, perf_type_id, PERF_COUNT_HW_BRANCH_MISSES,
@@ -169,10 +170,11 @@ impl PerfEvents {
         pe.set_disabled(1);
         pe.set_inherit(1);
         pe.set_inherit_stat(0);
-        pe.set_exclude_user(!(domain & EventDomain::USER).bits());
-        pe.set_exclude_kernel(!(domain & EventDomain::KERNEL).bits());
-        pe.set_exclude_hv(!(domain & EventDomain::HYPERVISOR).bits());
+        pe.set_exclude_user((domain & EventDomain::USER).is_empty() as u64);
+        pe.set_exclude_kernel((domain & EventDomain::KERNEL).is_empty() as u64);
+        pe.set_exclude_hv((domain & EventDomain::HYPERVISOR).is_empty() as u64);
         pe.read_format = u64::from(PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING);
+        dbg!(pe);
         pe
     }
 
