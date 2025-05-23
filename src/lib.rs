@@ -321,7 +321,7 @@ trait OutputStrategy {
 
 struct CSVOutput {
     normalization_constant: f64,
-    benchmark_params: HashMap<String, String>,
+    benchmark_params: Vec<(String, String)>,
 }
 
 impl CSVOutput {
@@ -407,13 +407,13 @@ impl OutputStrategy for CSVOutput {
 // pass in parameters
 pub struct PerfEventBlock {
     events: PerfEvents,
-    benchmark_params: HashMap<String, String>,
+    benchmark_params: Vec<( String, String )>,
     normalization_constant: f64,
 }
 
 impl PerfEventBlock {
     pub fn new(
-        benchmark_params: HashMap<String, String>,
+        benchmark_params: Vec<( String, String )>,
         normalization_constant: f64,
     ) -> Result<Self, std::io::Error> {
         let mut events = PerfEvents::new()?;
@@ -459,8 +459,8 @@ mod tests {
         }
         lineal.stop_measurement().unwrap();
 
-        let mut benchmark_params = HashMap::new();
-        benchmark_params.insert("Test".to_owned(), "Running".to_owned());
+        let mut benchmark_params = Vec::new();
+        benchmark_params.push(("Test".to_owned(), "Running".to_owned()));
 
         let csv_outputer = CSVOutput {
             normalization_constant: 10_000_000.0,
@@ -471,8 +471,8 @@ mod tests {
 
     #[test]
     fn block_works() {
-        let mut benchmark_params = HashMap::new();
-        benchmark_params.insert("Test".to_owned(), "Running".to_owned());
+        let mut benchmark_params = Vec::new();
+        benchmark_params.push(( "Test".to_owned(), "Running".to_owned() ));
         let block = PerfEventBlock::new(benchmark_params, 10_000_000.0);
         for _ in 0..10_000_000 {
             unsafe { _mm_pause() };
